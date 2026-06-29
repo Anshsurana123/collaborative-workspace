@@ -55,7 +55,7 @@ export const YjsProvider = ({ children }) => {
   useEffect(() => {
     // Dynamically choose between local WebSocket server and Yjs public demo server for deployment
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const wsUrl = import.meta.env.VITE_WS_URL || (isLocal ? 'ws://localhost:1234' : 'wss://demos.yjs.dev');
+    const wsUrl = import.meta.env.VITE_WS_URL || (isLocal ? 'ws://localhost:1234' : 'wss://collaborative-workspace-production-1089.up.railway.app');
     const roomName = import.meta.env.VITE_ROOM_NAME || 'sync-suite-workspace-hackathon-2026';
 
     const wsProvider = new WebsocketProvider(wsUrl, roomName, yDoc);
