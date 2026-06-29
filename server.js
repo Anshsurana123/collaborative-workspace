@@ -1,10 +1,38 @@
 import { WebSocketServer } from 'ws';
 import http from 'http';
-import { setupWSConnection } from 'y-websocket/bin/utils';
+import { setupWSConnection, docs } from 'y-websocket/bin/utils';
 
 const port = process.env.PORT || 1234;
 const server = http.createServer((request, response) => {
-  response.writeHead(200, { 'Content-Type': 'text/plain' });
+  // CORS Headers
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'OPTIONS, POST, GET',
+    'Access-Control-Max-Age': 2592000, // 30 days
+  };
+
+  if (request.method === 'OPTIONS') {
+    response.writeHead(204, headers);
+    response.end();
+    return;
+  }
+
+  const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+  
+  if (url.pathname === '/api/check-room') {
+    const room = url.searchParams.get('room');
+    const roomName = `sync-suite-room-${room ? room.trim().toUpperCase() : ''}`;
+    const exists = docs.has(roomName);
+
+    response.writeHead(200, { 
+      ...headers,
+      'Content-Type': 'application/json' 
+    });
+    response.end(JSON.stringify({ exists }));
+    return;
+  }
+
+  response.writeHead(200, { ...headers, 'Content-Type': 'text/plain' });
   response.end('Yjs WebSocket Server is running!\n');
 });
 

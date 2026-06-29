@@ -36,6 +36,8 @@ function App() {
   const [activeTab, setActiveTab] = useState('text');
   const [copied, setCopied] = useState(false);
   const [joinCode, setJoinCode] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [checking, setChecking] = useState(false);
 
   // Generate a random 6-character room code and reload
   const handleCreateWorkspace = () => {
@@ -45,22 +47,45 @@ function App() {
     window.location.href = url.toString();
   };
 
-  // Join an existing room via query param redirect
-  const handleJoinWorkspace = (e) => {
+  // Join an existing room if active on the server
+  const handleJoinWorkspace = async (e) => {
     e.preventDefault();
     if (!joinCode.trim()) return;
+
     const code = joinCode.trim().toUpperCase();
-    const url = new URL(window.location.href);
-    url.searchParams.set('room', code);
-    window.location.href = url.toString();
+    setChecking(true);
+    setErrorMessage('');
+
+    try {
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const wsUrl = import.meta.env.VITE_WS_URL || (isLocal ? 'ws://localhost:1234' : 'wss://collaborative-workspace-production-1089.up.railway.app');
+      const httpUrl = wsUrl.replace(/^ws/, 'http');
+
+      const response = await fetch(`${httpUrl}/api/check-room?room=${code}`);
+      const data = await response.json();
+
+      if (data.exists) {
+        // Room is active! Redirect.
+        const url = new URL(window.location.href);
+        url.searchParams.set('room', code);
+        window.location.href = url.toString();
+      } else {
+        setErrorMessage('This workspace code is not active. Check the code or create a new workspace.');
+      }
+    } catch (err) {
+      console.error('Error validating room existence:', err);
+      setErrorMessage('Could not connect to the server. Please try again.');
+    } finally {
+      setChecking(false);
+    }
   };
 
-  // Copy full collaboration invite link to clipboard
+  // Copy ONLY the room code to the clipboard
   const handleCopyShareLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    navigator.clipboard.writeText(roomCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    logActivity(`copied workspace share link`);
+    logActivity(`copied workspace room code`);
   };
 
   // Feature 10: Collapsible Sidebar & Shared Chat Array
@@ -274,6 +299,11 @@ function App() {
                   maxLength={10}
                 />
               </div>
+              {errorMessage && (
+                <div style={{ color: 'var(--accent-red)', fontSize: '11px', textAlign: 'center', marginTop: '4px', fontWeight: 500 }}>
+                  ⚠️ {errorMessage}
+                </div>
+              )}
               <button 
                 type="submit"
                 className="setup-submit-btn"
@@ -286,9 +316,9 @@ function App() {
                   color: 'var(--accent-brown)', 
                   border: '1px solid var(--accent-brown)' 
                 }}
-                disabled={!joinCode.trim()}
+                disabled={!joinCode.trim() || checking}
               >
-                Join Existing Workspace
+                {checking ? 'Validating Code...' : 'Join Existing Workspace'}
               </button>
             </form>
           </div>
