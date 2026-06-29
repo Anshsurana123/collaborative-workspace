@@ -65,6 +65,10 @@ const Spreadsheet = () => {
           // Get the full cell object from Luckysheet
           const cellObj = window.luckysheet.getCellValue(r, c);
           
+          // Deep compare before writing to Yjs to prevent update cascades
+          const yVal = ySpreadsheet.get(`${r}_${c}`);
+          if (JSON.stringify(cellObj) === JSON.stringify(yVal)) return;
+          
           yDoc.transact(() => {
             if (cellObj === null || cellObj === undefined || cellObj.v === null || cellObj.v === '') {
               ySpreadsheet.delete(`${r}_${c}`);
@@ -86,6 +90,10 @@ const Spreadsheet = () => {
               const r = op.r;
               const c = op.c;
               const cellObj = op.v;
+
+              // Deep compare to prevent duplicate write echoes
+              const yVal = ySpreadsheet.get(`${r}_${c}`);
+              if (JSON.stringify(cellObj) === JSON.stringify(yVal)) return;
 
               yDoc.transact(() => {
                 if (cellObj === null || cellObj === undefined || cellObj.v === null || cellObj.v === '' || cellObj === '#__qkdelete#') {
@@ -125,7 +133,11 @@ const Spreadsheet = () => {
 
       // Refresh view to apply updates
       window.luckysheet.refresh();
-      isRemoteChangeRef.current = false;
+
+      // Release lock after layout and repainting microtasks have completely drained
+      setTimeout(() => {
+        isRemoteChangeRef.current = false;
+      }, 50);
     };
 
     ySpreadsheet.observe(handleObserve);
