@@ -371,38 +371,43 @@ const TextEditor = () => {
         )}
 
         {/* Remote Cursors Overlay */}
-        {mode === 'edit' && activeTypers.map((peer, idx) => {
-          // Calculate character index and coordinate if we can match it
-          const peerCursor = peer.cursor;
-          if (!peerCursor) return null;
+        {mode === 'edit' && activeTypers.length > 0 && (
+          <div style={{
+            position: 'absolute',
+            top: '8px',
+            right: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            zIndex: 5,
+            pointerEvents: 'none'
+          }}>
+            {activeTypers.map((peer, idx) => {
+              const peerCursor = peer.cursor;
+              if (!peerCursor) return null;
 
-          // Standard overlay position relative to character index
-          // We can estimate the coordinates or position a caret
-          // For simplicity we show remote cursor position flags
-          return (
-            <div 
-              key={peer.clientId || idx} 
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                position: 'absolute',
-                top: 8,
-                right: 24 + (idx * 110),
-                background: `${peer.color}15`,
-                border: `1px solid ${peer.color}`,
-                padding: '2px 8px',
-                borderRadius: '12px',
-                fontSize: '11px',
-                pointerEvents: 'none',
-                animation: 'pulse-glow 1.5s infinite alternate'
-              }}
-            >
-              <span className="column-dot" style={{ backgroundColor: peer.color, width: '6px', height: '6px' }} />
-              <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{peer.name}</span>
-            </div>
-          );
-        })}
+              return (
+                <div 
+                  key={peer.clientId || idx} 
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    background: `${peer.color}15`,
+                    border: `1px solid ${peer.color}`,
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    fontSize: '11px',
+                    animation: 'pulse-glow 1.5s infinite alternate'
+                  }}
+                >
+                  <span className="column-dot" style={{ backgroundColor: peer.color, width: '6px', height: '6px' }} />
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{peer.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
