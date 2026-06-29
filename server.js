@@ -40,6 +40,21 @@ const wss = new WebSocketServer({ noServer: true });
 
 wss.on('connection', (ws, req) => {
   setupWSConnection(ws, req);
+
+  // Parse room name from the request URL
+  const url = new URL(req.url, 'http://localhost');
+  const roomName = url.pathname.slice(1);
+
+  // Automatically garbage collect rooms when all users disconnect
+  ws.on('close', () => {
+    setTimeout(() => {
+      const doc = docs.get(roomName);
+      if (doc && doc.conns.size === 0) {
+        docs.delete(roomName);
+        console.log(`Garbage collected empty room: ${roomName}`);
+      }
+    }, 100);
+  });
 });
 
 server.on('upgrade', (request, socket, head) => {
