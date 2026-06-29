@@ -31,32 +31,39 @@ export const YjsProvider = ({ children }) => {
   const [localUser, setLocalUser] = useState(null);
   const [peers, setPeers] = useState([]);
   const [showSetup, setShowSetup] = useState(false);
+  const [roomCode, setRoomCode] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('room')?.toUpperCase() || '';
+  });
 
-  // Initialize Local User
+  // Initialize Local User Profile (only if roomCode is active)
   useEffect(() => {
+    if (!roomCode) return;
+
     const savedName = sessionStorage.getItem('sync_suite_username');
     const savedColor = sessionStorage.getItem('sync_suite_usercolor');
 
     if (savedName && savedColor) {
       setLocalUser({ name: savedName, color: savedColor, activeTab: 'text' });
     } else {
-      // Auto generate a name but also trigger the choice
       const randomName = `${getRandomItem(ADJECTIVES)} ${getRandomItem(NOUNS)}`;
       const randomColor = getRandomItem(COLORS);
       const user = { name: randomName, color: randomColor, activeTab: 'text' };
       setLocalUser(user);
       sessionStorage.setItem('sync_suite_username', randomName);
       sessionStorage.setItem('sync_suite_usercolor', randomColor);
-      setShowSetup(true); // Pop up a setup to let them edit it
+      setShowSetup(true); // Pop up profile selection modal
     }
-  }, []);
+  }, [roomCode]);
 
-  // Initialize WebSocket connection ONCE on mount
+  // Initialize WebSocket connection ONCE when roomCode is active
   useEffect(() => {
+    if (!roomCode) return;
+
     // Dynamically choose between local WebSocket server and Yjs public demo server for deployment
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const wsUrl = import.meta.env.VITE_WS_URL || (isLocal ? 'ws://localhost:1234' : 'wss://collaborative-workspace-production-1089.up.railway.app');
-    const roomName = import.meta.env.VITE_ROOM_NAME || 'sync-suite-workspace-hackathon-2026';
+    const roomName = `sync-suite-room-${roomCode}`;
 
     const wsProvider = new WebsocketProvider(wsUrl, roomName, yDoc);
 
@@ -96,9 +103,11 @@ export const YjsProvider = ({ children }) => {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       wsProvider.disconnect();
-      yDoc.destroy();
+      wsProvider.destroy();
+      setConnected(false);
+      setProvider(null);
     };
-  }, [yDoc]);
+  }, [roomCode, yDoc]);
 
   // Set initial awareness state once provider is ready and localUser is loaded
   useEffect(() => {
@@ -189,6 +198,8 @@ export const YjsProvider = ({ children }) => {
         toggleConnection,
         logActivity,
         COLORS,
+        roomCode,
+        setRoomCode
       }}
     >
       {children}

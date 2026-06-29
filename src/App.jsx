@@ -28,11 +28,40 @@ function App() {
     updateLocalPresence,
     setShowSetup,
     toggleConnection,
-    logActivity
+    logActivity,
+    roomCode,
+    setRoomCode
   } = useYjs();
 
   const [activeTab, setActiveTab] = useState('text');
-  // Toast notifications state removed
+  const [copied, setCopied] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+
+  // Generate a random 6-character room code and reload
+  const handleCreateWorkspace = () => {
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const url = new URL(window.location.href);
+    url.searchParams.set('room', code);
+    window.location.href = url.toString();
+  };
+
+  // Join an existing room via query param redirect
+  const handleJoinWorkspace = (e) => {
+    e.preventDefault();
+    if (!joinCode.trim()) return;
+    const code = joinCode.trim().toUpperCase();
+    const url = new URL(window.location.href);
+    url.searchParams.set('room', code);
+    window.location.href = url.toString();
+  };
+
+  // Copy full collaboration invite link to clipboard
+  const handleCopyShareLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    logActivity(`copied workspace share link`);
+  };
 
   // Feature 10: Collapsible Sidebar & Shared Chat Array
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -158,6 +187,116 @@ function App() {
     }
   };
 
+  // Render private workspace splash landing screen if no room code in URL
+  if (!roomCode) {
+    return (
+      <div 
+        className="modal-overlay" 
+        style={{ 
+          background: 'var(--bg-main)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          minHeight: '100vh',
+          width: '100vw',
+          margin: 0,
+          padding: 0
+        }}
+      >
+        <div 
+          className="setup-modal" 
+          style={{ 
+            maxWidth: '420px', 
+            padding: '38px 42px', 
+            boxShadow: '0 8px 30px rgba(139, 111, 78, 0.08)',
+            border: '1px solid var(--border-soft)'
+          }}
+        >
+          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+            <h1 
+              style={{ 
+                fontSize: '36px', 
+                fontFamily: "'Instrument Serif', Georgia, serif", 
+                fontStyle: 'italic',
+                fontWeight: 'normal',
+                color: 'var(--accent-brown)',
+                marginBottom: '8px'
+              }}
+            >
+              Sync Suite
+            </h1>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+              A premium, secure multiplayer workspace for text editing, sketching, organization, and calculations.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Create Workspace Option */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <button 
+                onClick={handleCreateWorkspace}
+                className="setup-submit-btn"
+                style={{ width: '100%', padding: '12px 18px', fontSize: '14px', borderRadius: '24px', fontWeight: 600 }}
+              >
+                Create Private Workspace
+              </button>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                Generates a secure 6-character room key.
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '8px 0' }}>
+              <div style={{ flexGrow: 1, height: '1px', background: 'var(--border-soft)' }} />
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>or</span>
+              <div style={{ flexGrow: 1, height: '1px', background: 'var(--border-soft)' }} />
+            </div>
+
+            {/* Join Workspace Option */}
+            <form onSubmit={handleJoinWorkspace} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <label className="input-label" style={{ fontSize: '12px', fontWeight: 600, textAlign: 'center', display: 'block' }}>Enter Room Code</label>
+                <input
+                  type="text"
+                  className="text-input"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value)}
+                  placeholder="e.g. XF8D3G"
+                  style={{ 
+                    width: '100%', 
+                    padding: '10px 14px', 
+                    borderRadius: '24px', 
+                    textTransform: 'uppercase',
+                    textAlign: 'center',
+                    fontWeight: 600,
+                    letterSpacing: '2px',
+                    fontSize: '15px'
+                  }}
+                  maxLength={10}
+                />
+              </div>
+              <button 
+                type="submit"
+                className="setup-submit-btn"
+                style={{ 
+                  width: '100%', 
+                  padding: '10px 18px', 
+                  fontSize: '13px', 
+                  borderRadius: '24px', 
+                  background: 'transparent', 
+                  color: 'var(--accent-brown)', 
+                  border: '1px solid var(--accent-brown)' 
+                }}
+                disabled={!joinCode.trim()}
+              >
+                Join Existing Workspace
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
       {/* Sidebar Navigation */}
@@ -267,6 +406,34 @@ function App() {
           </div>
 
           <div className="presence-section">
+            {/* Workspace Sharing Code */}
+            <div 
+              onClick={handleCopyShareLink}
+              className="network-badge"
+              style={{ 
+                cursor: 'pointer',
+                background: '#ffffff',
+                border: '1px solid var(--border-soft)',
+                borderRadius: '16px',
+                height: '28px',
+                gap: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0 12px',
+                color: 'var(--text-main)',
+                fontSize: '11px',
+                fontWeight: 600,
+                boxShadow: 'var(--shadow-small)'
+              }}
+              title="Click to copy invite link"
+            >
+              <Users size={12} color="var(--accent-brown)" />
+              <span>Workspace: <strong>{roomCode}</strong></span>
+              <span style={{ fontSize: '10px', color: copied ? '#6b8f71' : 'var(--text-muted)' }}>
+                {copied ? 'Copied!' : '(Copy)'}
+              </span>
+            </div>
+
             {/* Connection Indicator */}
             <div className="network-badge" style={{ cursor: 'pointer' }} onClick={toggleConnection} title="Click to toggle offline mode">
               <span className={`network-dot ${connected ? '' : 'disconnected'}`}></span>
